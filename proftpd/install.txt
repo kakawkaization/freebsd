@@ -1,0 +1,8 @@
+# pkg ins proftpd
+
+Add host to hosts file.
+
+Edit /usr/local/etc/proftpd.conf, and uncomment parameter DefaultRoot.
+
+# echo 'proftpd_enable="YES"' >> /etc/rc.conf
+# service proftpd start
