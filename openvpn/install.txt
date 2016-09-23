@@ -1,0 +1,304 @@
+Setup
+A few things are required before OpenVPN can be setup.
+
+Install Needed Software
+
+To start with, install the required software. The only thing necessary to install should be OpenVPN. Easy-RSA is brought along in the install.
+
+After updating the package repository, install openvpn. I’m using pkg, if you are using ports you should know the analagous process.
+
+[root]# pkg update
+[root]# pkg install openvpn
+Setup Directory Structure for Configuration
+
+OpenVPN has sample configuration files, make a directory for configuration
+
+[root]# mkdir /usr/local/etc/openvpn
+Copy the sample files:
+
+[root]# cp /usr/local/share/examples/openvpn/sample-config-files/server.conf \
+           /usr/local/etc/openvpn/openvpn.conf
+The configuration files for Easy-RSA are also needed, copy them to the configuration directory:
+
+[root]# cp -r /usr/local/share/easy-rsa /usr/local/etc/openvpn/easy-rsa
+Configuration
+Now that we have all the required files, configuration can start.
+
+Easy-RSA
+
+To start, configure keys with Easy-RSA.
+
+Move into the Easy-RSA directory
+
+[root]# cd /usr/local/etc/openvpn/easy-rsa
+Inside should be several files:
+
+[root]# ls
+easyrsa.real		openssl-1.0.cnf.example	vars.example
+openssl-1.0.cnf		vars			x509-types
+Edit Easy-RSA Configuration Files
+
+In the vars file, edit the required fields replacing them with the proper data. Any fields being used should be uncommented.
+
+Set the organizational fields:
+
+set_var EASYRSA_REQ_COUNTRY     "<COUNTRY>"
+set_var EASYRSA_REQ_PROVINCE    "<PROVINCE>"
+set_var EASYRSA_REQ_CITY        "<CITY>"
+set_var EASYRSA_REQ_ORG         "<ORGANIZATION>"
+set_var EASYRSA_REQ_EMAIL       "<EMAIL>"
+set_var EASYRSA_REQ_OU          "<ORGANIZATIONAL UNIT>"
+Set bit size, 2048 is reccomended:
+
+set_var EASYRSA_KEY_SIZE        2048
+Set expiry number in days:
+
+# In how many days should the root CA key expire?
+
+set_var EASYRSA_CA_EXPIRE       3650
+
+# In how many days should certificates expire?
+
+set_var EASYRSA_CERT_EXPIRE     3650
+Generate Keys
+
+Now keys can be generated with the easyrsa.real shell script.
+
+By default FreeBSD uses the “c shell”, this can cause problems due to the configuration script setting variables in a different way. To avoid these issues change into the “bourne shell”, sh when running the script.
+
+[root]# sh
+To see all easy-rsa commands, run:
+
+sh-4.3# ./easyrsa.real help
+For detailed usage and help for a command, run:
+
+sh-4.3# ./easyrsa help COMMAND
+To get a listing of options that can be supplied before the command, use:
+
+sh-4.3# ./easyrsa help options
+Full list of commands available:
+
+  init-pki
+  build-ca [ cmd-opts ]
+  gen-dh
+  gen-req <filename_base> [ cmd-opts ]
+  sign-req <type> <filename_base>
+  build-client-full <filename_base> [ cmd-opts ]
+  build-server-full <filename_base> [ cmd-opts ]
+  revoke <filename_base>
+  gen-crl
+  update-db
+  show-req <filename_base> [ cmd-opts ]
+  show-cert <filename_base> [ cmd-opts ]
+  import-req <request_file_path> <short_basename>
+  export-p7 <filename_base> [ cmd-opts ]
+  export-p12 <filename_base> [ cmd-opts ]
+  set-rsa-pass <filename_base> [ cmd-opts ]
+  set-ec-pass <filename_base> [ cmd-opts ]
+Initialize Public Key Infrastructure
+
+Run init-pki:
+
+sh-4.3# ./easyrsa.real init-pki
+Note: using Easy-RSA configuration from: ./vars
+
+init-pki complete; you may now create a CA or requests.
+Your newly created PKI dir is: /usr/local/etc/openvpn/easy-rsa/pki
+Build Certificate Authority
+
+Follow instructions entering a CA password and common name.
+
+sh-4.3# ./easyrsa.real build-ca
+Server Certificates
+
+Generate certificates for a server with the name openvpn-server. Use “nopass” to generate an unencrypted key so that a password is not required by the server on startup. This is what most people use on the server; however, this means it must be protected carefully.
+
+sh-4.3# ./easyrsa.real build-server-full openvpn-server nopass
+Check if successful:
+
+sh-4.3# ./easyrsa.real show-cert openvpn-server
+Client Certificate
+
+Build client certificate(s), use a unique name for each certificate.:
+
+sh-4.3# ./easyrsa.real build-client-full <name>
+Diffie Hellman Parameters
+
+Generate Diffie Hellman parameters:
+
+sh-4.3# ./easyrsa.real gen-dh
+Move Keys
+
+With the files created, move the key’s to their destination.
+
+The files of importance are:
+
+In pki/:
+
+dh.pem - Diffie Hellman parameters. Needed by server.
+ca.crt - Root CA certificate. Needed by server and all clients.
+In pki/issued/:
+
+openvpn-server.crt - Server certificate. Needed by server.
+<name>.crt - Client certificate. Needed by client.
+In pki/private/ [These are secret]:
+
+openvpn-server.key - Server key. Needed by server.
+<name>.key - Client key. Needed by client.
+ca.key - Root CA key. Needed by key signing machine.
+So the following keys should be moved to the server:
+
+pki/dh.pem
+pki/ca.crt
+pki/issued/openvpn-server.crt
+pki/private/openvpn-server.key
+If the server is the same machine as the machine used as the Certificate Authority, make a directory for the keys in the openvpn directory:
+
+[root]# mkdir /usr/local/etc/openvpn/keys
+Move the server keys:
+
+[root]# cp pki/dh.pem \
+           pki/ca.crt \
+           pki/issued/openvpn-server.crt \
+           pki/private/openvpn-server.key \
+           /usr/local/etc/openvpn/keys
+and the following moved to each client:
+
+pki/ca.crt
+pki/issued/<name>.crt
+pki/private/<name>.key
+OpenVPN
+
+Now OpenVPN can be configured.
+
+Move back to the OpenVPN directory:
+
+[root]# cd /usr/local/etc/openvpn
+Server Config
+
+Edit the server configuration file openvpn.conf.
+
+Uncomment this out for non-Windows systems.
+
+user nobody
+group nobody
+Edit the paths where the keys are located.
+
+ca /usr/local/etc/openvpn/keys/ca.crt
+cert /usr/local/etc/openvpn/keys/openvpn-server.crt
+key /usr/local/etc/openvpn/keys/openvpn-server.key  # This file should be kept secret
+Edit the diffie helman parameter path:
+
+dh /usr/local/etc/openvpn/keys/dh.pem
+Client Config
+
+On the client, find the OpenVPN configuration file. On FreeBSD sample configuration files are in /usr/local/share/examples/openvpn/sample-config-files/client.conf.
+
+Copy them to the OpenVPN directory:
+
+[root]# cp /usr/local/share/examples/openvpn/sample-config-files/client.conf \
+           /usr/local/etc/openvpn/client.conf
+Edit the server name, use the hostname or ip:
+
+remote <openvpn-server ip> 1194
+As done with the server, replace the keys with their proper paths:
+
+ca /usr/local/etc/openvpn/keys/ca.crt
+cert /usr/local/etc/openvpn/keys/<name>.crt
+key /usr/local/etc/openvpn/keys/<name>.key
+Enable OpenVPN
+
+Enable OpenVPN to start on boot as a tun device on both server and client.
+
+[root]# sysrc openvpn_enable="YES"
+[root]# sysrc openvpn_if="tun"
+Setup Logging
+
+On server and client, logging can be setup with syslog.
+
+[root]# nano /etc/syslog.conf
+Add the following to the end of syslog before the !*:
+
+!openvpn
+*.* /var/log/openvpn.log
+Setup log rotation.
+
+Edit newsyslog.conf.
+
+[root]# nano /etc/newsyslog.conf
+Add the following to the list of logs:
+
+/var/log/openvpn.log                    600  30    *    @T00  ZC
+Start Openvpn
+
+OpenVPN can now be started.
+
+[root]# service openvpn start
+Check ifconfig, a new tun interface should appear.
+
+[root]# ifconfig
+ifconfig
+tun0: flags=8051<UP,POINTOPOINT,RUNNING,MULTICAST> metric 0 mtu 1500
+	options=80000<LINKSTATE>
+	inet6 fe80::20a:e4ff:fe84:a87%tun0 prefixlen 64 tentative scopeid 0x3
+	inet 10.8.0.1 --> 10.8.0.2 netmask 0xffffffff
+	nd6 options=29<PERFORMNUD,IFDISABLED,AUTO_LINKLOCAL>
+	Opened by PID 97347
+Finishing Tasks
+Once OpenVPN is set up, there are a few things that should be done to make it fully operational. Some security should probably be added to the server, if OpenVPN is being used within a network, ports may need to be forwarded, and DDNS may need to be set up.
+
+Port Forwarding
+
+If OpenVPN is being run inside a network, ports may need to be forwarded to OpenVPN. Since I am using OpenVPN inside of my home network I had to forward port 1194/UDP. UDP is the reccomended protocol to use, as it functions best as a tunnel; however, depending on where OpenVPN is being used, UDP may not work, in which case 443/TCP or 994/TCP is recommended.
+
+Firewall
+
+If ports are opened, keep in mind that puts nothing between the internet and the server so security should be kept in mind. At minimum, a fireall should probably be set up if OpenVPN is going to be open to the internet, IPFW is a simple firewall that is easy to setup and is built into FreeBSD.
+
+Dynamic DNS
+
+If OpenVPN is being used inside of a home network, most people’s internet facing IP’s are not static. In order to be able to access an ever changing IP, DDNS can be used. DDNS will check for changes in the external IP, and will map a persistent URL to the current IP.
+
+DDNS is often offered by domain hosting providers, however there are also free options out there like NO-IP. Most routers will also often integrate with one or more DDNS providers.
+
+NO-IP
+
+NO-IP offers free DDNS, and will supply a domain which will remain yours as long as it is used once every 30 days. They also have a client that supports FreeBSD.
+
+NO-IP requires you to register, they will then allow you to choose an address that will link to your IP.
+
+After registering and creating an address, install NO-IP:
+
+[root]# pkg install noip
+The install should have created a group and user:
+
+Installing noip-2.1.9_3...
+===> Creating users and/or groups.
+Creating group 'noip' with gid '939'.
+Creating user 'noip' with uid '939'.
+Generate a configuration file by running make conf in the noip port directory:
+
+[root]# cd /usr/ports/dns/noip
+[root]# make conf
+It will ask for your username, interface and password:
+
+Please select the Internet interface from this list.
+
+By typing the number associated with it.
+0	sge0
+1	lo0
+2	tun0
+2
+Please enter the login/email string for no-ip.com  <noip email>
+Please enter the password for user '<noip email>'  ****************************************************************
+
+Only one host [<noip domain>] is registered to this account.
+It will be used.
+Please enter an update interval:[30]
+Do you wish to run something at successful update?[N] (y/N)  N
+
+New configuration file '/usr/local/etc/no-ip2.conf' created.
+Start NO-IP and enable it to start at boot:
+
+[root]# service noip start
+[root]# sysrc noip_enable="YES"
