@@ -25,7 +25,7 @@ Stop all services.
 
 If disk is degradeted.
 Hot change.
-Pull of disk.
+Pull off disk.
 Wait when server wil be ok, and will answer on your commands.
 # gmirror forget gm0
 # gmirror insert gm0 ada1
