@@ -42,7 +42,7 @@ socket = /var/run/fail2ban/fail2ban.sock # файл сокета для связ
 
 [Definition]
 actionstart = # команда выполняемая при старте fail2ban
-actionstop = pfw table 1 flush # команда выполняемая при остановке, обнуляем блокирующую таблицу
+actionstop = ipfw table 1 flush # команда выполняемая при остановке, обнуляем блокирующую таблицу
 actioncheck = # команда проверки
 actionban = ipfw table 1 add  # забанить IP адрес, при срабатывании, IP добавляется в таблицу 1 ipfw
 actionunban = ipfw table 1 delete  # обратное действие, удалить IP из таблицы
