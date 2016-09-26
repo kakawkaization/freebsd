@@ -22,3 +22,10 @@ Stop all services.
 # gmirror status
 # iostat -w 1
 # tail -5 /var/log/messages
+
+If disk is degradeted.
+Hot change.
+Pull of disk.
+Wait when server wil be ok, and will answer on your commands.
+# gmirror forget gm0
+# gmirror insert gm0 ada1
