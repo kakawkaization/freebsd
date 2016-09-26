@@ -1,0 +1,24 @@
+# dmesg -a | grep ada
+# grep mirror /boot/loader.conf
+geom_mirror_load="YES"
+# reboot
+# kldstat | grep mirr
+# gmirror label -v -b round-robin gm0 /dev/ada1
+# gpart backup ada0 > /tmp/gpart.txt
+# gpart restore mirror/gm0 < /tmp/gpart.txt
+# gpart bootcode -b /boot/pmbr -p /boot/gptboot -1 mirror/gm0
+# newfs -U /dev/mirror/gm0p2
+# mount /dev/mirror/gm0 /mnt
+Stop all services.
+# vi /etc/fstab
+/dev/mirror/gm0p2       /               ufs     rw      1       1
+/dev/mirror/gm0p3       none            swap    sw      0       0
+# tar -czvf system.tar.gz  --one-file-system /
+# tar -xzvf system.tar.gz -C /mnt
+# reboot
+# df -h
+# swapinfo
+# gmirror insert gm0 ada0
+# gmirror status
+# iostat -w 1
+# tail -5 /var/log/messages
